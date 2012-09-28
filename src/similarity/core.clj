@@ -6,6 +6,11 @@
 (def gettysburg-address
   "Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal.\nNow we are engaged in a great civil war, testing whether that nation, or any nation, so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.\nBut, in a larger sense, we can not dedicate, we can not consecrate, we can not hallow this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract. The world will little note, nor long remember what we say here, but it can never forget what they did here. It is for us the living, rather, to be dedicated to the great task remaining before us--that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion--that we here highly resolve that these dead shall not have died in vain--that this nation, under God, shall have a new birth of freedom--and that government of the people, by the people, for the people, shall not perish from the earth.")
 
+(def S1 #{:a :d})
+(def S2 #{:c})
+(def S3 #{:b :d :e})
+(def S4 #{:a :c :d})
+
 (defn sim-jaccard
   [s t]
   "Returns the similarity of sets as a relative size of their intersection."
@@ -15,7 +20,16 @@
 (defn shingles
   [k s]
   "Returns the set of k-shingles that appear one or more times in string s."
-  (->> (str/replace s #"\s" "")
+  (->> (str/replace s #"\s+" " ")
        (partition k 1 s)
        (map #(apply str %))
-       set))
+       (map #(.hashCode %))
+       (apply sorted-set)))
+
+(defn characteristics
+  [coll]
+  "Builds a naively dense characteristic matrix from a collection of documents. Each column represents a bit-vector representing if a particular document's k-shingles is part of the universal k-shingle set."
+  (let [universe (apply set/union coll)]
+    (map (fn [s]
+           (map #(contains? s %) universe))
+         coll)))
