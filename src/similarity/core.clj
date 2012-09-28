@@ -28,7 +28,9 @@
 
 (defn characteristics
   [coll]
-  "Builds a naively dense characteristic matrix from a collection of documents. Each column represents a bit-vector representing if a particular document's k-shingles is part of the universal k-shingle set."
+  "Builds a naively dense characteristic matrix from a collection of documents.
+  Each column represents a bit-vector representing if a particular
+  document's k-shingles is part of the universal k-shingle set."
   (let [universe (apply set/union coll)]
     (map (fn [s]
            (map #(contains? s %) universe))
