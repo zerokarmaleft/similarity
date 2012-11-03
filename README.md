@@ -8,9 +8,9 @@ Finding similar items with locality-sensitive hashing.
 
 Clone the repository and download dependencies.
 ```
-        git clone https://github.com/zerokarmaleft/similarity.git
-        cd similarity
-        lein deps
+        $ git clone https://github.com/zerokarmaleft/similarity.git
+        $ cd similarity
+        $ lein deps
 ```
 
 ## License
