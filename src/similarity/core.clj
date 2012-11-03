@@ -43,11 +43,11 @@
 (comment ; Example 3.4
   (let [D1 (shingles 9 "The plane was ready for touch down")
         D2 (shingles 9 "The quarterback scored a touchdown")]
-    (sim-jaccard D1 D2))))
+    (sim-jaccard D1 D2)))
 
 (comment ; Exercise 3.2 1
-    (let [D "The most effective way to represent documents as sets, for the purpose of identifying lexically similar documents is to construct from the document the set of short strings that appear within it."]
-      (take 10 (shingles 3 D))))
+  (let [D "The most effective way to represent documents as sets, for the purpose of identifying lexically similar documents is to construct from the document the set of short strings that appear within it."]
+    (take 10 (shingles 3 D))))
 
 (defn characteristics
   [coll]
@@ -58,7 +58,10 @@
     (vec (map (fn [s]
                 (vec (map #(contains? s %) universe)))
               coll))))
-;; (characteristics [S1 S2 S3 S4])
+
+(comment
+  (characteristics [S1 S2 S3 S4]))
+
 (defn count-cols [C]
   (count C))
 
@@ -96,6 +99,12 @@
 ;; => ([[1 1] nil nil [1 1]] ...)
 ;; (reduce merge-sigs (vec (cycle c nil)) sig-partials)
 (comment
-  (signatures docs hash-1 hash-2))
+  (signatures docs hash-1 hash-2)
+  (let [[d1 d2 d3 d4] (map set (signatures docs hash-1 hash-2))]
+    {[:d1 :d2] (sim-jaccard d1 d2)
+     [:d1 :d3] (sim-jaccard d1 d3)
+     [:d1 :d4] (sim-jaccard d1 d4)
+     [:d2 :d3] (sim-jaccard d2 d3)
+     [:d2 :d4] (sim-jaccard d2 d4)
+     [:d3 :d4] (sim-jaccard d3 d4)}))
 
-(defn read)
