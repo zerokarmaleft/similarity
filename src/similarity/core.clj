@@ -29,6 +29,26 @@
   (sim-jaccard #{2 3 5 7} #{2 4 6})
   (sim-jaccard #{2 4 6} #{2 4 6}))
 
+(defn sim-vector
+  "Returns the similarity of signature vectors as a relative size of their intersection"
+  [s t]
+  (letfn [(sim-vector-iter [s t n-intersect n-union]
+            (let [[x xs] s
+                  [y ys] t]
+              (if (or (empty? s) (empty? t))
+                (/ n-intersect n-union)
+                (if (= x y)
+                  (recur (rest s) (rest t) (inc n-intersect) (inc n-union))
+                  (recur (rest s) (rest t) n-intersect (inc n-union))))))]
+    (sim-vector-iter s t 0 0)))
+
+(comment
+  (sim-vector [1 0] [0 1])
+  (sim-vector [1 0 0] [0 0 1])
+  (sim-vector [1 0 0] [0 0 0])
+  (sim-vector [1 1 1 1] [1 1 1 0])
+  (sim-vector [1 1 1 1] [1 1 1 1]))
+
 (defn shingles
   [k s]
   "Returns the set of k-shingles that appear one or more times in string s."
@@ -72,6 +92,8 @@
 (defn char->row [c] (- (int c) 97))
 (defn hash-1 [x] (mod (+ x 1) 5))
 (defn hash-2 [x] (mod (+ (* x 3) 1) 5))
+(defn hash-3 [x] (mod (+ (* x 2) 4) 5))
+(defn hash-4 [x] (mod (- (* x 3) 1) 5))
 
 (defn transpose
   [C]
@@ -98,13 +120,23 @@
 ;; (map (fn [row sig] ...) matrix sigs)
 ;; => ([[1 1] nil nil [1 1]] ...)
 ;; (reduce merge-sigs (vec (cycle c nil)) sig-partials)
-(comment
-  (signatures docs hash-1 hash-2)
-  (let [[d1 d2 d3 d4] (map set (signatures docs hash-1 hash-2))]
-    {[:d1 :d2] (sim-jaccard d1 d2)
-     [:d1 :d3] (sim-jaccard d1 d3)
-     [:d1 :d4] (sim-jaccard d1 d4)
-     [:d2 :d3] (sim-jaccard d2 d3)
-     [:d2 :d4] (sim-jaccard d2 d4)
-     [:d3 :d4] (sim-jaccard d3 d4)}))
 
+(comment ; Example 3.8
+  (signatures docs hash-1 hash-2)
+  (let [[d1 d2 d3 d4] (signatures docs hash-1 hash-2)]
+    {[:d1 :d2] (sim-vector d1 d2)
+     [:d1 :d3] (sim-vector d1 d3)
+     [:d1 :d4] (sim-vector d1 d4)
+     [:d2 :d3] (sim-vector d2 d3)
+     [:d2 :d4] (sim-vector d2 d4)
+     [:d3 :d4] (sim-vector d3 d4)}))
+
+(comment ; Exercise 3.3.2
+  (signatures docs hash-1 hash-2 hash-3 hash-4)
+  (let [[d1 d2 d3 d4] (signatures docs hash-1 hash-2 hash-3 hash-4)]
+    {[:d1 :d2] (sim-vector d1 d2)
+     [:d1 :d3] (sim-vector d1 d3)
+     [:d1 :d4] (sim-vector d1 d4)
+     [:d2 :d3] (sim-vector d2 d3)
+     [:d2 :d4] (sim-vector d2 d4)
+     [:d3 :d4] (sim-vector d3 d4)}))
