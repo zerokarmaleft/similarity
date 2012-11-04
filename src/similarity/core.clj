@@ -1,5 +1,6 @@
 (ns similarity.core
   (:require [clojure.java.io :as io]
+            [clojure.math.combinatorics :as comb]
             [clojure.set :as set]
             [clojure.string :as str])
   (:use swank.core))
@@ -105,7 +106,7 @@
 
 (defn signatures
   [doc-shingles & hash-fns]
-  (let [U         (map char->row (apply set/union doc-shingles))
+  (let [U         (apply set/union doc-shingles)
         C         (characteristics doc-shingles)
         hash-sigs (map (apply juxt hash-fns) U)
         sig-rows  (map (fn [row sig]
@@ -140,3 +141,58 @@
      [:d2 :d3] (sim-vector d2 d3)
      [:d2 :d4] (sim-vector d2 d4)
      [:d3 :d4] (sim-vector d3 d4)}))
+
+(comment ; Exercise 3.3.3
+  (let [S1     #{2 5}
+        S2     #{0 1}
+        S3     #{3 4}
+        S4     #{0 2 4}
+        docs   [S1 S2 S3 S4]]
+    (letfn [(hash-1 [x] (mod (+ (* 2 x) 1) 6))
+            (hash-2 [x] (mod (+ (* 3 x) 2) 6))
+            (hash-3 [x] (mod (+ (* 5 x) 2) 6))]
+      (let [[d1 d2 d3 d4] (signatures docs hash-1 hash-2 hash-3)]
+        {:signatures [d1 d2 d3 d4]
+         [:d1 :d2]   [(sim-vector d1 d2) (sim-jaccard S1 S2)]
+         [:d1 :d3]   [(sim-vector d1 d3) (sim-jaccard S1 S3)]
+         [:d1 :d4]   [(sim-vector d1 d4) (sim-jaccard S1 S3)]
+         [:d2 :d3]   [(sim-vector d2 d3) (sim-jaccard S2 S3)]
+         [:d2 :d4]   [(sim-vector d2 d4) (sim-jaccard S2 S4)]
+         [:d3 :d4]   [(sim-vector d3 d4) (sim-jaccard S3 S4)]}))))
+
+(use 'clojure.pprint)
+
+(comment ; Section 3.4
+  (let [k-shingles (partial shingles 4)
+        d1   (k-shingles "The quick brown fox jumps over the lazy dog.")
+        d2   (k-shingles "The quick white wolf eats the lazy sheep.")
+        d3   (k-shingles "The slow brown fox jumps into the quizzical dog.")
+        d4   (k-shingles "The slow white wolf lays next to the lazy dog.")
+        d5   (k-shingles "The quick brown fox jumps over the lazy cat.")
+        docs [d1 d2 d3 d4 d5]
+        U    (sort (apply set/union docs))
+        C    (characteristics docs)
+        hash-1 (fn [s] (mod (+ (* 2 (.hashCode s)) 1) (count U)))
+        hash-2 (fn [s] (mod (+ (* 3 (.hashCode s)) 2) (count U)))
+        hash-3 (fn [s] (mod (+ (* 5 (.hashCode s)) 2) (count U)))
+        hash-4 (fn [s] (mod (+ (* 2 (.hashCode s)) 4) (count U)))
+        hash-5 (fn [s] (mod (- (* 3 (.hashCode s)) 1) (count U)))
+        hash-6 (fn [s] (mod (+ (* 5 (.hashCode s)) 4) (count U)))
+        hash-fns [hash-1 hash-2 hash-3 hash-4 hash-5 hash-6]
+        hash-sigs (map (apply juxt [hash-1 hash-2]) U)
+        sig-rows  (map (fn [row sig]
+                         (map #(if %
+                                 sig
+                                 (vec (take (count sig)
+                                            (repeat Integer/MAX_VALUE))))
+                              row))
+                       (transpose C) hash-sigs)
+        [s1 s2 s3 s4 s5] (signatures docs hash-1 hash-2 hash-3 hash-4 hash-5 hash-6)
+        sim-docs (map #(apply sim-jaccard %)
+                      (comb/combinations [d1 d2 d3 d4 d5] 2))
+        sim-sigs (map #(apply sim-vector %)
+                      (comb/combinations [s1 s2 s3 s4 s5] 2))]
+    (pprint {:signatures [s1 s2 s3 s4 s5]
+             :sim-docs   sim-docs
+             :sim-sigs   sim-sigs
+             :error      (map #(- %1 %2) sim-docs sim-sigs)})))
