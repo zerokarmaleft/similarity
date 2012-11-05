@@ -3,7 +3,7 @@
             [clojure.math.combinatorics :as comb]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:use swank.core))
+  (:use clojure.pprint))
 
 (def U  #{\a \b \c \d \e})
 (def S1 #{\a \d})
@@ -160,39 +160,32 @@
          [:d2 :d4]   [(sim-vector d2 d4) (sim-jaccard S2 S4)]
          [:d3 :d4]   [(sim-vector d3 d4) (sim-jaccard S3 S4)]}))))
 
-(use 'clojure.pprint)
-
-(comment ; Section 3.4
+(defn -main
+  [& args]
+  "Minhashing example for small documents."
   (let [k-shingles (partial shingles 4)
-        d1   (k-shingles "The quick brown fox jumps over the lazy dog.")
-        d2   (k-shingles "The quick white wolf eats the lazy sheep.")
-        d3   (k-shingles "The slow brown fox jumps into the quizzical dog.")
-        d4   (k-shingles "The slow white wolf lays next to the lazy dog.")
-        d5   (k-shingles "The quick brown fox jumps over the lazy cat.")
+        d1   "The quick brown fox jumps over the lazy dog."
+        d2   "The quick white wolf eats the lazy sheep."
+        d3   "The slow brown fox jumps into the quizzical dog."
+        d4   "The slow white wolf lays next to the lazy dog."
+        d5   "The quick brown fox jumps over the lazy cat."
         docs [d1 d2 d3 d4 d5]
-        U    (sort (apply set/union docs))
-        C    (characteristics docs)
+        [k1 k2 k3 k4 k5] (map k-shingles [d1 d2 d3 d4 d5])
+        U    (sort (apply set/union [k1 k2 k3 k4 k5]))
         hash-1 (fn [s] (mod (+ (* 2 (.hashCode s)) 1) (count U)))
         hash-2 (fn [s] (mod (+ (* 3 (.hashCode s)) 2) (count U)))
         hash-3 (fn [s] (mod (+ (* 5 (.hashCode s)) 2) (count U)))
         hash-4 (fn [s] (mod (+ (* 2 (.hashCode s)) 4) (count U)))
         hash-5 (fn [s] (mod (- (* 3 (.hashCode s)) 1) (count U)))
         hash-6 (fn [s] (mod (+ (* 5 (.hashCode s)) 4) (count U)))
-        hash-fns [hash-1 hash-2 hash-3 hash-4 hash-5 hash-6]
-        hash-sigs (map (apply juxt [hash-1 hash-2]) U)
-        sig-rows  (map (fn [row sig]
-                         (map #(if %
-                                 sig
-                                 (vec (take (count sig)
-                                            (repeat Integer/MAX_VALUE))))
-                              row))
-                       (transpose C) hash-sigs)
-        [s1 s2 s3 s4 s5] (signatures docs hash-1 hash-2 hash-3 hash-4 hash-5 hash-6)
+        [s1 s2 s3 s4 s5] (signatures [k1 k2 k3 k4 k5] hash-1 hash-2 hash-3 hash-4 hash-5 hash-6)
+        pairs    (comb/combinations [:d1 :d2 :d3 :d4 :d5] 2)
         sim-docs (map #(apply sim-jaccard %)
-                      (comb/combinations [d1 d2 d3 d4 d5] 2))
+                      (comb/combinations [k1 k2 k3 k4 k5] 2))
         sim-sigs (map #(apply sim-vector %)
                       (comb/combinations [s1 s2 s3 s4 s5] 2))]
-    (pprint {:signatures [s1 s2 s3 s4 s5]
-             :sim-docs   sim-docs
-             :sim-sigs   sim-sigs
-             :error      (map #(- %1 %2) sim-docs sim-sigs)})))
+    (pprint {:documents  [d1 d2 d3 d4 d5]
+             :k-shingles [k1 k2 k3 k4 k5]
+             :signatures (sort (zipmap [:d1 :d2 :d3 :d4 :d5] [s1 s2 s3 s4 s5]))
+             :similarity (zipmap pairs (partition 4 (interleave (repeat :jaccard) sim-docs (repeat :minhash) sim-sigs)))
+             :error      (zipmap pairs (map #(Math/abs (double (- %1 %2))) sim-docs sim-sigs))})))
