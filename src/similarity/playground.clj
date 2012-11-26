@@ -35,13 +35,13 @@
 (defn hash-1 [x] (mod (+ (line->row x) 1) 5))
 (defn hash-2 [x] (mod (+ (* (line->row x) 3) 1) 5))
 
-(def ^:dynamic *nbhash* 250)
+(def ^:dynamic *nbhash* 500)
 
 (defmapcatop [extract-shingles [k]] [line] (shingles k line))
 
 (defn make-hash-fn [seed n]
   (fn [shingle]
-    (mod (.asInt (.hashString (Hashing/murmur3_32 seed) shingle)) n)))
+    (.asInt (.hashString (Hashing/murmur3_32 seed) shingle))))
 
 (defn make-hash-fns [n]
   (apply juxt (map #(make-hash-fn % n) (range n))))
@@ -124,7 +124,7 @@
          ((c/negate #'=) ?doc-id "S1")
          (simvector [target-sig] :<< [?hash-1 ?hash-2] :> ?similarity))))
 
-(defn similarity [docs doc-id k n]
+(defn similarity [docs doc-id threshold k n]
   (let [minhash-sigs (first (??- (minhash-sigs docs k)))
         target-sig (first (??- (minhash-sig minhash-sigs doc-id)))
         hash-vars  (v/gen-non-nullable-vars n)]
@@ -133,7 +133,14 @@
     (<- [?doc-id ?similarity]
         (minhash-sigs :>> (reduce conj ["?doc-id"] hash-vars))
         ((c/negate #'=) ?doc-id doc-id)
-        (simvector target-sig :<< hash-vars :> ?similarity))))
+        (simvector target-sig :<< hash-vars :> ?similarity)
+        (> ?similarity threshold))))
 
 (comment
-  (?- (stdout) (similarity D "S1" 1 *nbhash*)))
+  (?- (stdout) (similarity D "S1" 1 *nbhash*))
+  (?- (stdout) (similarity D "S2" 1 *nbhash*))
+  (?- (stdout) (similarity D "S3" 1 *nbhash*))
+  (?- (stdout) (similarity D "S4" 1 *nbhash*)))
+
+(comment
+  (?- (stdout) (similarity documents "docA" 0.85 4 *nbhash*)))
