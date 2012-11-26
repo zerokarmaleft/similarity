@@ -43,10 +43,18 @@
 (defn make-hash-fns [n]
   (apply juxt (map #(make-hash-fn % n) (range n))))
 
+(def multihash (make-hash-fns 8))
+
 (defmacro defhashfn [name seed n]
   (let [sym (gensym)]
     `(defn ~name [~sym]
        (mod (.asInt (.hashString (Hashing/murmur3_32 ~seed) ~sym) ~n)))))
+
+(defn minhash-sig [docs doc-id]
+  (let [hash-vars (v/gen-non-nullable-vars 2)]
+    (<- hash-vars
+        (docs :>> (reduce conj ["?doc-id"] hash-vars))
+        (= ?doc-id doc-id))))
 
 (comment
   ;; make minhash signatures with hand-written hash-fns
@@ -59,29 +67,43 @@
          ((apply c/juxt [hash-1 hash-2]) ?shingle :>> hash-vars)
          ((c/each c/min) :<< hash-vars :>> minhash-vars))))
 
+(comment
+  ;; get minhash signature for S1
+  ;; write to file
+  (?- (hfs-textline "S1-minhash-sig")
+      (minhash-sig D-sigs "S1")))
+
 (defmapop [simvector [v1]] [& v2]
   (let [counts (group-by #(= (first %) (second %))
                          (partition 2 2 (interleave v1 v2)))]
-    (double (/ (counts true) (+ (counts true) (counts false))))))
+    (double (/ (count (counts true))
+               (+ (count (counts true))
+                  (count (counts false)))))))
 
-(defn minhash-sig [docs doc-id]
-  (let [hash-vars (v/gen-non-nullable-vars 2)]
-    (<- hash-vars
-        (docs :>> (reduce conj ["?doc-id"] hash-vars))
-        (= ?doc-id doc-id))))
+(defmapop [simhash [v1]] [& v2]
+  (do (prn (str "v1: " v1)) (prn (str "v2: " v2))))
 
-(comment
-  (?- (hfs-textline "S1-minhash-sig")
-      (minhash-sig D-sigs "S1")))
+(defn simhash [v1 & v2]
+  (do (prn (str "v1: " v1)) (prn (str "v2: " v2))))
+
+(defmapop [simhash [x1 x2]] [& y]
+  (let [x [x1 x2]
+        counts (group-by #(= (first %) (second %))
+                         (partition 2 2 (interleave x y)))]
+    (double (/ (count (counts true))
+               (+ (count (counts true))
+                  (count (counts false)))))))
 
 (comment
   (let [target-sig (map #(Integer/parseInt %)
                         (str/split (slurp "S1-minhash-sig/part-00000") #"\s+"))
-        hash-vars  (v/gen-non-nullable-vars 2)]
+        hash-vars  (v/gen-non-nullable-vars 2)
+        simhash-vars (v/gen-non-nullable-vars 2)]
     (?<- (stdout)
          [?doc-id ?similarity]
-         (D-sigs :>> (reduce conj ["?doc-id"] hash-vars))
-         (simvector target-sig :<< hash-vars :> ?similarity))))
+         (D-sigs ?doc-id ?hash-1 ?hash-2)
+         ((c/negate #'=) ?doc-id "S1")
+         (simhash target-sig :<< [?hash-1 ?hash-2] :> ?similarity))))
 
 (comment
   ;; make minhash signatures with generated hash-fns
@@ -98,8 +120,6 @@
            (extract-shingles 1 ?line :> ?shingle)
            ((apply c/juxt hash-fns) ?shingle :>> hash-vars)
            ((c/each c/min) :<< hash-vars :>> minhash-vars)))))
-
-(def multihash (make-hash-fns 8))
 
 (comment
   ;; hard-coded # of hash functions
