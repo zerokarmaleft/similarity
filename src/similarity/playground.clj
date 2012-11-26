@@ -35,6 +35,8 @@
 (defn hash-1 [x] (mod (+ (line->row x) 1) 5))
 (defn hash-2 [x] (mod (+ (* (line->row x) 3) 1) 5))
 
+(def ^:dynamic *nbhash* 250)
+
 (defmapcatop [extract-shingles [k]] [line] (shingles k line))
 
 (defn make-hash-fn [seed n]
@@ -44,7 +46,7 @@
 (defn make-hash-fns [n]
   (apply juxt (map #(make-hash-fn % n) (range n))))
 
-(def multihash (make-hash-fns 8))
+(def multihash (make-hash-fns *nbhash*))
 
 (defmacro defhashfn [name seed n]
   (let [sym (gensym)]
@@ -79,7 +81,7 @@
            ((c/each c/min) :<< hash-vars :>> minhash-vars)))))
 
 (defn minhash-sigs [docs k]
-  (let [n            8
+  (let [n            *nbhash*
         hash-vars    (v/gen-non-nullable-vars n)
         minhash-vars (v/gen-non-nullable-vars n)]
     (<- (reduce conj ["?doc"] minhash-vars)
@@ -93,7 +95,7 @@
       (minhash-sigs D 1)))
 
 (defn minhash-sig [docs doc-id]
-  (let [n         8
+  (let [n         *nbhash*
         hash-vars (v/gen-non-nullable-vars n)]
     (<- hash-vars
         (docs :>> (reduce conj ["?doc-id"] hash-vars))
@@ -134,4 +136,4 @@
         (simvector target-sig :<< hash-vars :> ?similarity))))
 
 (comment
-  (?- (stdout) (similarity D "S1" 1 8)))
+  (?- (stdout) (similarity D "S1" 1 *nbhash*)))
