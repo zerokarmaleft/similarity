@@ -1,6 +1,9 @@
 pom.xml
 *jar
-target/*.*
+input
+output
+rfc-all
+target
 /lib/
 /classes/
 .lein-deps-sum
