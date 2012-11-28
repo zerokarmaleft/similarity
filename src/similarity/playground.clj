@@ -25,122 +25,58 @@
    ["S3" "bde"]
    ["S4" "acd"]])
 
-(def D-sigs
-  [["S1" 1 0]
-   ["S2" 3 2]
-   ["S3" 0 0]
-   ["S4" 1 0]])
-
-(defn line->row [line] (- (int (first line)) 97))
-(defn hash-1 [x] (mod (+ (line->row x) 1) 5))
-(defn hash-2 [x] (mod (+ (* (line->row x) 3) 1) 5))
-
-(def ^:dynamic *nbhash* 500)
-
 (defmapcatop [extract-shingles [k]] [line] (shingles k line))
 
-(defn make-hash-fn [seed n]
-  (fn [shingle]
-    (.asInt (.hashString (Hashing/murmur3_32 seed) shingle))))
+(defmapop [multihash [n]] [shingle]
+  [(map (fn [seed]
+          (.asInt (.hashString (Hashing/murmur3_32 seed) shingle)))
+        (range n))])
 
-(defn make-hash-fns [n]
-  (apply juxt (map #(make-hash-fn % n) (range n))))
+(defn merge-vectors
+  [v1 v2]
+  (map #(map min %1 %2) v1 v2))
 
-(def multihash (make-hash-fns *nbhash*))
+(defbufferop minhash-sig
+  [hash-sigs]
+  [(reduce merge-vectors hash-sigs)])
 
-(defmacro defhashfn [name seed n]
-  (let [sym (gensym)]
-    `(defn ~name [~sym]
-       (mod (.asInt (.hashString (Hashing/murmur3_32 ~seed) ~sym) ~n)))))
+(defn minhash-sigs
+  [docs k n]
+  (<- [?doc-id ?minhash-sig]
+      (docs :> ?doc-id ?line)
+      (extract-shingles k ?line :> ?shingle)
+      (multihash n ?shingle :> ?hash-sig)
+      (minhash-sig ?hash-sig :> ?minhash-sig)))
 
-(comment
-  ;; make minhash signatures with hand-written hash-fns
-  (let [hash-vars    (v/gen-non-nullable-vars 2)
-        minhash-vars (v/gen-non-nullable-vars 2)]
-    (?<- (stdout)
-         (reduce conj ["?doc"] minhash-vars)
-         (D :> ?doc ?line)
-         (extract-shingles 1 ?line :> ?shingle)
-         ((apply c/juxt [hash-1 hash-2]) ?shingle :>> hash-vars)
-         ((c/each c/min) :<< hash-vars :>> minhash-vars))))
-
-(comment
-  ;; make minhash signatures with generated hash-fns
-  ;; doesn't work, defhashfn doesn't result in vars being interned
-  (let [n            2
-        hash-fns     (for [i (range n)] (gensym "hash-op-"))
-        hash-vars    (v/gen-non-nullable-vars n)
-        minhash-vars (v/gen-non-nullable-vars n)]
-    (doseq [[i sym] (partition 2 (interleave (range n) hash-fns))]
-      (defhashfn sym i n)
-      (?<- (stdout)
-           (reduce conj ["?doc"] minhash-vars)
-           (D :> ?doc ?line)
-           (extract-shingles 1 ?line :> ?shingle)
-           ((apply c/juxt hash-fns) ?shingle :>> hash-vars)
-           ((c/each c/min) :<< hash-vars :>> minhash-vars)))))
-
-(defn minhash-sigs [docs k]
-  (let [n            *nbhash*
-        hash-vars    (v/gen-non-nullable-vars n)
-        minhash-vars (v/gen-non-nullable-vars n)]
-    (<- (reduce conj ["?doc"] minhash-vars)
-        (docs :> ?doc ?line)
-        (extract-shingles k ?line :> ?shingle)
-        (multihash ?shingle :>> hash-vars)
-        ((c/each c/min) :<< hash-vars :>> minhash-vars))))
-
-(comment
-  (?- (stdout)
-      (minhash-sigs D 1)))
-
-(defn minhash-sig [docs doc-id]
-  (let [n         *nbhash*
-        hash-vars (v/gen-non-nullable-vars n)]
-    (<- hash-vars
-        (docs :>> (reduce conj ["?doc-id"] hash-vars))
-        (= ?doc-id doc-id))))
-
-(comment
-  (let [minhash-sigs (first (??- (minhash-sigs D 1)))]
-    (?- (stdout)
-        (minhash-sig minhash-sigs "S1"))))
-
-(defmapop [simvector [v1]] [& v2]
+(defn simvector
+  [v1 v2]
   (let [counts (group-by #(= (first %) (second %))
                          (partition 2 2 (interleave v1 v2)))]
     (double (/ (count (counts true))
                (+ (count (counts true))
                   (count (counts false)))))))
 
-(comment
-  (let [target-sig (map #(Integer/parseInt %)
-                        (str/split (slurp "S1-minhash-sig/part-00000") #"\s+"))
-        hash-vars  (v/gen-non-nullable-vars 2)
-        simhash-vars (v/gen-non-nullable-vars 2)]
-    (?<- (stdout)
-         [?doc-id ?similarity]
-         (D-sigs ?doc-id ?hash-1 ?hash-2)
-         ((c/negate #'=) ?doc-id "S1")
-         (simvector [target-sig] :<< [?hash-1 ?hash-2] :> ?similarity))))
-
 (defn similarity [docs doc-id threshold k n]
-  (let [minhash-sigs (first (??- (minhash-sigs docs k)))
-        target-sig (first (??- (minhash-sig minhash-sigs doc-id)))
-        hash-vars  (v/gen-non-nullable-vars n)]
-    (prn minhash-sigs)
-    (prn target-sig)
+  (let [sigs       (minhash-sigs docs k n)
+        target-sig (first (first (??<- [?minhash-sig]
+                                       (sigs ?doc-id ?minhash-sig)
+                                       (= ?doc-id doc-id))))]
     (<- [?doc-id ?similarity]
-        (minhash-sigs :>> (reduce conj ["?doc-id"] hash-vars))
+        (sigs ?doc-id ?minhash-sig)
         ((c/negate #'=) ?doc-id doc-id)
-        (simvector target-sig :<< hash-vars :> ?similarity)
+        (simvector target-sig ?minhash-sig :> ?similarity)
         (> ?similarity threshold))))
 
 (comment
-  (?- (stdout) (similarity D "S1" 1 *nbhash*))
-  (?- (stdout) (similarity D "S2" 1 *nbhash*))
-  (?- (stdout) (similarity D "S3" 1 *nbhash*))
-  (?- (stdout) (similarity D "S4" 1 *nbhash*)))
+  (??- (minhash-sigs D 1 2)
+       (minhash-sigs D 1 8)))
 
 (comment
-  (?- (stdout) (similarity documents "docA" 0.85 4 *nbhash*)))
+  (?- (stdout) (similarity D "S1" 0.10 1 2))
+  (?- (stdout) (similarity D "S1" 0.10 1 8))
+  (?- (stdout) (similarity D "S1" 0.10 1 1000)))
+
+(comment
+  (?- (stdout) (similarity documents "docA" 0.6 4 2))
+  (?- (stdout) (similarity documents "docA" 0.6 4 8))
+  (?- (stdout) (similarity documents "docA" 0.6 4 1000)))
