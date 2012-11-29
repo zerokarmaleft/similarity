@@ -1,0 +1,4 @@
+S1	ad
+S2	c
+S3	bde
+S4	acd
