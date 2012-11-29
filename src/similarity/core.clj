@@ -5,7 +5,8 @@
             [cascalog.ops :as c]
             [cascalog.conf :as conf]
             [cascalog.vars :as v])
-  (:import  [com.google.common.hash Hashing]))
+  (:import  [com.google.common.hash Hashing])
+  (:gen-class))
 
 (defn shingles
   [k s]
