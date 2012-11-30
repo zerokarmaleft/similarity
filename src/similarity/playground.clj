@@ -36,6 +36,7 @@
 
 (comment
   (?<- (stdout)
-       [?doc-id ?band-id ?band-hash]
+       [?doc-id ?lshash-sig]
        ((minhash-sigs documents 4 100) ?doc-id ?minhash-sig)
-       (bands 20 ?minhash-sig :> ?band-id ?band)))
+       (bands 20 ?minhash-sig :> ?bands)
+       (multibandhash ?bands :> ?lshash-sig)))

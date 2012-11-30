@@ -58,8 +58,19 @@
 (defmapcatop [bands [b]] [minhash-sig]
   (let [n (count minhash-sig)
         r (/ n b)]
-    (partition 2 2 (interleave (range r)
-                               (partition r r minhash-sig)))))
+    [[(partition 2 2 (interleave (range r)
+                                  (partition r r minhash-sig)))]]))
+
+(defn multibandhash
+  [bands]
+  [(map #(.asInt (Hashing/combineOrdered %))
+        (map (fn [band]
+               (let [[seed row] band
+                     hash-fn    (Hashing/murmur3_32 seed)]
+                 (map (fn [hash-code]
+                        (.hashLong hash-fn hash-code))
+                      row)))
+             bands))])
 
 (defn similarity [docs doc-id threshold k n]
   (let [sigs        (minhash-sigs docs k n)
