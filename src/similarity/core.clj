@@ -106,10 +106,11 @@
         (simvector target-sig ?minhash-sig :> ?similarity)
         (> ?similarity threshold))))
 
-(defn -main [in out doc-id threshold k n & args]
+(defn -main [in out doc-id threshold k n b & args]
   (let [docs      (hfs-delimited in :skip-header? false)
         threshold (Double/parseDouble threshold)
         k         (Integer/parseInt k)
-        n         (Integer/parseInt n)]
+        n         (Integer/parseInt n)
+        b         (Integer/parseInt b)]
     (?- (hfs-delimited out)
-        (similarity docs doc-id threshold k n))))
+        (similarity docs doc-id threshold k n b))))
