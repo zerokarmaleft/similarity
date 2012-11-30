@@ -33,3 +33,9 @@
   (?- (stdout) (similarity documents "docA" 0.6 4 2))
   (?- (stdout) (similarity documents "docA" 0.6 4 8))
   (?- (stdout) (similarity documents "docA" 0.6 4 1000)))
+
+(comment
+  (?<- (stdout)
+       [?doc-id ?band-id ?band-hash]
+       ((minhash-sigs documents 4 100) ?doc-id ?minhash-sig)
+       (bands 20 ?minhash-sig :> ?band-id ?band)))

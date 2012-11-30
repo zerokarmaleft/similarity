@@ -55,6 +55,12 @@
                  (+ (count (counts true))
                     (count (counts false))))))))
 
+(defmapcatop [bands [b]] [minhash-sig]
+  (let [n (count minhash-sig)
+        r (/ n b)]
+    (partition 2 2 (interleave (range r)
+                               (partition r r minhash-sig)))))
+
 (defn similarity [docs doc-id threshold k n]
   (let [sigs        (minhash-sigs docs k n)
         [[[target-sig]]] (??- (find-by-id sigs doc-id))]
