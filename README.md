@@ -42,7 +42,7 @@ Finally, pretty print the sample dataset, which is simply a vector of 2-tuples. 
 	 ["docE"
 	  "A pangram is a phrase that contains all of the letters of the English alphabet. The quick brown fox jumps over the lazy cat."]]
 	nil
-	similarity.playground=> (?- (stdout) (similarity documents "docA" 0.6 4 1000))
+	similarity.playground=> (?- (stdout) (similarity documents "docA" 0.6 4 1000 200))
 ```
 
 To run with Hadoop locally, build an uberjar (which packages the job, and all dependencies, including Clojure into a single JAR).
