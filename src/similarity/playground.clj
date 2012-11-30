@@ -25,18 +25,12 @@
        (minhash-sigs D 1 8)))
 
 (comment
-  (?- (stdout) (similarity D "S1" 0.10 1 2))
-  (?- (stdout) (similarity D "S1" 0.10 1 8))
-  (?- (stdout) (similarity D "S1" 0.10 1 1000)))
+  (?- (stdout)
+      (lsh-sigs (minhash-sigs documents 4 100) 20)))
 
 (comment
-  (?- (stdout) (similarity documents "docA" 0.6 4 2))
-  (?- (stdout) (similarity documents "docA" 0.6 4 8))
-  (?- (stdout) (similarity documents "docA" 0.6 4 1000)))
+  (?- (stdout)
+      (candidates (lsh-sigs (minhash-sigs documents 4 100) 20) "docA")))
 
 (comment
-  (?<- (stdout)
-       [?doc-id ?lshash-sig]
-       ((minhash-sigs documents 4 100) ?doc-id ?minhash-sig)
-       (bands 20 ?minhash-sig :> ?bands)
-       (multibandhash ?bands :> ?lshash-sig)))
+  (?- (stdout) (similarity documents "docA" 0.6 4 1000 200)))

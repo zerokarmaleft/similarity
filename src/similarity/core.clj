@@ -41,8 +41,8 @@
 
 (defn find-by-id
   [doc-sigs doc-id]
-  (<- [?minhash-sig]
-      (doc-sigs ?doc-id ?minhash-sig)
+  (<- [?doc-sig]
+      (doc-sigs ?doc-id ?doc-sig)
       (= ?doc-id doc-id)))
 
 (defn simvector
@@ -72,11 +72,36 @@
                       row)))
              bands))])
 
-(defn similarity [docs doc-id threshold k n]
-  (let [sigs        (minhash-sigs docs k n)
-        [[[target-sig]]] (??- (find-by-id sigs doc-id))]
+(defn lsh-sigs [doc-sigs b]
+  (<- [?doc-id ?lsh-sig]
+      (doc-sigs ?doc-id ?minhash-sig)
+      (bands b ?minhash-sig :> ?bands)
+      (multibandhash ?bands :> ?lsh-sig)))
+
+(deffilterop candidate-pair? [v1 v2]
+  (some true? (map #(= %1 %2) v1 v2)))
+
+(defn candidates [lsh-sigs doc-id]
+  (let [[[[target-sig]]] (??- (find-by-id lsh-sigs doc-id))]
+    (<- [?doc-id ?lsh-sig]
+        (lsh-sigs ?doc-id ?lsh-sig)
+        (candidate-pair? target-sig ?lsh-sig))))
+
+(defn minhash-similarity [docs doc-id threshold k n]
+  (let [doc-sigs         (minhash-sigs docs k n)
+        [[[target-sig]]] (??- (find-by-id doc-sigs doc-id))]
     (<- [?doc-id ?similarity]
-        (sigs ?doc-id ?minhash-sig)
+        (doc-sigs ?doc-id ?minhash-sig)
+        ((c/negate #'=) ?doc-id doc-id)
+        (simvector target-sig ?minhash-sig :> ?similarity)
+        (> ?similarity threshold))))
+
+(defn similarity [docs doc-id threshold k n b]
+  (let [doc-sigs         (minhash-sigs docs k n)
+        lsh-sigs         (candidates (lsh-sigs doc-sigs b) doc-id)
+        [[[target-sig]]] (??- (find-by-id doc-sigs doc-id))]
+    (<- [?doc-id ?similarity]
+        (doc-sigs ?doc-id ?minhash-sig)
         ((c/negate #'=) ?doc-id doc-id)
         (simvector target-sig ?minhash-sig :> ?similarity)
         (> ?similarity threshold))))
