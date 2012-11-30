@@ -57,7 +57,7 @@
   (let [n (count minhash-sig)
         r (/ n b)]
     [[(partition 2 2 (interleave (range r)
-                                  (partition r r minhash-sig)))]]))
+                                 (partition r r minhash-sig)))]]))
 
 (defn multibandhash
   [bands]
