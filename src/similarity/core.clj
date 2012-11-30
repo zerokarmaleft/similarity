@@ -8,15 +8,13 @@
   (:import  [com.google.common.hash Hashing])
   (:gen-class))
 
-(defn shingles
-  [k s]
+(defmapcatop [extract-shingles [k]]
+  [s]
   "Returns the set of k-shingles that appear one or more times in string s."
   (->> (str/replace s #"\s+" " ")
        (partition k 1 s)
        (map #(apply str %))
        set))
-
-(defmapcatop [extract-shingles [k]] [line] (shingles k line))
 
 (defmapop [multihash [n]] [shingle]
   [(map (fn [seed]
