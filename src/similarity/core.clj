@@ -39,19 +39,25 @@
       (multihash n ?shingle :> ?hash-sig)
       (minhash-sig ?hash-sig :> ?minhash-sig)))
 
+(defn find-by-id
+  [doc-sigs doc-id]
+  (<- [?minhash-sig]
+      (doc-sigs ?doc-id ?minhash-sig)
+      (= ?doc-id doc-id)))
+
 (defn simvector
   [v1 v2]
   (let [counts (group-by #(= (first %) (second %))
                          (partition 2 2 (interleave v1 v2)))]
-    (double (/ (count (counts true))
-               (+ (count (counts true))
-                  (count (counts false)))))))
+    (if (empty? counts)
+      0
+      (double (/ (count (counts true))
+                 (+ (count (counts true))
+                    (count (counts false))))))))
 
 (defn similarity [docs doc-id threshold k n]
-  (let [sigs       (minhash-sigs docs k n)
-        target-sig (first (first (??<- [?minhash-sig]
-                                       (sigs ?doc-id ?minhash-sig)
-                                       (= ?doc-id doc-id))))]
+  (let [sigs        (minhash-sigs docs k n)
+        [[[target-sig]]] (??- (find-by-id sigs doc-id))]
     (<- [?doc-id ?similarity]
         (sigs ?doc-id ?minhash-sig)
         ((c/negate #'=) ?doc-id doc-id)
@@ -59,7 +65,7 @@
         (> ?similarity threshold))))
 
 (defn -main [in out doc-id threshold k n & args]
-  (let [docs      (hfs-delimited in :skip-header? true)
+  (let [docs      (hfs-delimited in :skip-header? false)
         threshold (Double/parseDouble threshold)
         k         (Integer/parseInt k)
         n         (Integer/parseInt n)]
