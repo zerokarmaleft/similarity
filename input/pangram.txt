@@ -3,3 +3,4 @@ docB	A pangram is a phrase that contains all of the letters of the English alpha
 docC	A pangram is a phrase that contains all of the letters of the English alphabet. The slow brown fox jumps into the quizzical dog.
 docD	A pangram is a phrase that contains all of the letters of the English alphabet. The slow white wolf lays next to the lazy dog.
 docE	A pangram is a phrase that contains all of the letters of the English alphabet. The quick brown fox jumps over the lazy cat.
+docF	A pangram is a phrase that contains all of the letters of the English alphabet. The quick brown fox jumps over the lazy dog. This is a pangram..

@@ -79,9 +79,10 @@
 (deffilterop candidate-pair? [v1 v2]
   (some true? (map #(= %1 %2) v1 v2)))
 
-(defn candidates [lsh-sigs doc-id]
+(defn candidates [doc-sigs lsh-sigs doc-id]
   (let [[[[target-sig]]] (??- (find-by-id lsh-sigs doc-id))]
-    (<- [?doc-id ?lsh-sig]
+    (<- [?doc-id ?minhash-sig]
+        (doc-sigs ?doc-id ?minhash-sig)
         (lsh-sigs ?doc-id ?lsh-sig)
         (candidate-pair? target-sig ?lsh-sig))))
 
@@ -94,21 +95,20 @@
         (simvector target-sig ?minhash-sig :> ?similarity)
         (> ?similarity threshold))))
 
-(defn similarity [docs doc-id threshold k n b]
+(defn similarity [docs doc-id k n b]
   (let [doc-sigs         (minhash-sigs docs k n)
-        lsh-sigs         (candidates (lsh-sigs doc-sigs b) doc-id)
+        candidates       (candidates doc-sigs (lsh-sigs doc-sigs b) doc-id)
         [[[target-sig]]] (??- (find-by-id doc-sigs doc-id))]
     (<- [?doc-id ?similarity]
-        (doc-sigs ?doc-id ?minhash-sig)
+        (candidates ?doc-id ?minhash-sig)
         ((c/negate #'=) ?doc-id doc-id)
-        (simvector target-sig ?minhash-sig :> ?similarity)
-        (> ?similarity threshold))))
+        (simvector target-sig ?minhash-sig :> ?similarity))))
 
-(defn -main [in out doc-id threshold k n b & args]
+(defn -main [in out doc-id k n b & args]
   (let [docs      (hfs-delimited in :skip-header? false)
-        threshold (Double/parseDouble threshold)
+        ;; threshold (Double/parseDouble threshold)
         k         (Integer/parseInt k)
         n         (Integer/parseInt n)
         b         (Integer/parseInt b)]
     (?- (hfs-delimited out)
-        (similarity docs doc-id threshold k n b))))
+        (similarity docs doc-id k n b))))
