@@ -39,4 +39,7 @@
 
 (comment
   (?- (stdout) (minhash-similarity documents "docA" 0.5 4 1000))
-  (?- (stdout) (similarity documents "docA" 0.5 4 1000 20)))
+  (?- (stdout) (similarity documents "docA" 4 1000 20))
+  (?- (stdout) (similarity documents "docA" 4 1000 50))
+  (?- (stdout) (similarity documents "docA" 4 1000 100))
+  (?- (stdout) (similarity documents "docA" 4 1000 200)))
