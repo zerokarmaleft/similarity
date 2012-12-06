@@ -54,7 +54,7 @@ If you pretty print the sample dataset, you can see that it is simply a vector o
 To run with Hadoop locally, build an uberjar (which packages the job, and all dependencies, including Clojure into a single JAR).
 ```
 	$ lein uberjar
-	$ hadoop jar target/similarity.jar <input path> <output path> <document index> <similarity threshold> <size of k-shingles> <number of hash functions> <number of bands for LSH>
+	$ hadoop jar target/similarity.jar <input path> <output path> <document index> <size of k-shingles> <number of hash functions> <number of bands for LSH>
 ```
 
 ## License
