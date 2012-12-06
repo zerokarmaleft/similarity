@@ -43,13 +43,13 @@ If you pretty print the sample dataset, you can see that it is simply a vector o
 	  "A pangram is a phrase that contains all of the letters of the English alphabet. The quick brown fox jumps over the lazy cat."]]
 	nil
 ```
-`minhash-similarity` calculates the minhash similarity of each pair of documents in the corpus. For a large body of documents, an exhaustive search is intractable. Since Hadoop's default logging output is quite verbose, we'll use Cascalog's `with-log-level` to suppress logging for the sample queries.
+`minhash-similarity` calculates the minhash similarity of each pair of documents in the corpus. For a large body of documents, an exhaustive search is intractable. Since Hadoop's default logging output is quite verbose, we'll use Cascalog's `with-log-level` to suppress everything but the results for the sample queries.
 ```
 	similarity.playground=> (use 'cascalog.io)
 	nil
 	similarity.playground=> (with-log-level :off (?- (stdout) (minhash-similarity documents "docA" 0.6 4 1000)))
 ```
-`similarity` uses locality-sensitive hashing to narrow down the search space to candidate pairs. As described above, the number of bands parameter `b` partitions each minhash signature. If at least one of these bands hash to the same value as the corresponding band in the target document's minhash-signature, it becomes a candidate pair. Smaller bands results in a higher threshold for similarity.
+`similarity` uses locality-sensitive hashing to narrow down the search space to candidate pairs. As described above, the number of bands parameter `b` partitions each minhash signature. If at least one of these bands hash to the same value as the corresponding band in the target document's minhash-signature, it becomes a candidate pair. A higher quantity of smaller bands results in a lower threshold for similarity.
 ```
 	similarity.playground=> (with-log-level :off (?- (stdout) (similarity documents "docA" 0.6 4 1000 200)))
 ```
